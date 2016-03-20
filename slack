@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+
+from optparse import OptionParser
+from collections import OrderedDict
+#from http.client import HTTPSConnection
+from httplib import HTTPSConnection
+#from urllib.parse import urlparse
+from urlparse import urlparse
+import json
+
+
+# Parse body from Zabbix and return a dict
+# Body must be composed of lines formated as "KEY: VALUE"
+def parse_body(body):
+    params = OrderedDict([
+        # Their keys are used in other some places
+        ('DATETIME', ''),    # fallback
+        ('TRIGGER_STATUS', ''),    # color
+        ('TRIGGER_SEVERITY', '')    # color
+        ])
+    for str in body.split("\n"):
+        key, value = str.split(':')
+        params[key.strip()] = value.strip()
+    return params
+
+
+# Color of the post on Slack
+def decide_color(trigger_status, trigger_severity):
+    # Slack allows 'good', 'warning' and 'danger' as color
+    if trigger_status == 'OK':
+        return 'good'
+    elif trigger_severity == 'Information':
+        return '#7499FF'
+    elif trigger_severity == 'Warning':
+        return 'warning'
+    else:
+        return 'danger'
+
+
+# Fields of the post
+# They are composed of key and value from body
+def build_fields(params):
+    fields = []
+    for key in params:
+        fields.append({
+            "title": key,
+            "value": params[key],
+            "short": "true"
+            })
+    return fields
+
+
+def post(url, payload):
+    uri = urlparse(url)
+    conn = HTTPSConnection(uri.netloc)
+    conn.request('POST', uri.path, json.dumps(payload))
+    response = conn.getresponse()
+    return response.status, response.reason
+
+
+if __name__ == '__main__':
+    usage = "Usage: %prog [options] TO SUBJECT BODY"
+    parser = OptionParser(usage=usage)
+    parser.add_option("-u", "--user", dest="user",
+                      help="Username for the post", metavar="USERNAME")
+    parser.add_option("-c", "--channel", dest="channel",
+                      help="Channel which post to", metavar="CHANNEL")
+    (options, args) = parser.parse_args()
+
+    if len(args) != 3:
+        parser.print_help()
+        exit(1)
+
+    url, subject, body = args
+
+    payload = {}
+    if options.channel:
+        payload['channel'] = options.channel
+    if options.user:
+        payload['username'] = options.user
+
+    params = parse_body(body)
+    color = decide_color(params['TRIGGER_STATUS'], params['TRIGGER_SEVERITY'])
+    fields = build_fields(params)
+    payload['attachments'] = [{
+            "fallback": params['DATETIME'] + ': ' + subject,
+            "title": subject,
+            "color": color,
+            "fields": fields
+        }]
+    response = post(url, payload)
+    if not (response[0] == 200 and response[1] == 'OK'):
+        exit(1)
