@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
+import sys
 from optparse import OptionParser
 from collections import OrderedDict
-#from http.client import HTTPSConnection
-from httplib import HTTPSConnection
-#from urllib.parse import urlparse
-from urlparse import urlparse
+
+if sys.version_info.major < 3:
+    from httplib import HTTPSConnection
+    from urlparse import urlparse
+else:
+    from http.client import HTTPSConnection
+    from urllib.parse import urlparse
+
 import json
 
 
@@ -19,7 +24,7 @@ def parse_body(body):
         ('TRIGGER_SEVERITY', '')    # color
         ])
     for str in body.split("\n"):
-        key, value = str.split(':')
+        key, value = str.split(':', 1)
         params[key.strip()] = value.strip()
     return params
 
