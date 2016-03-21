@@ -64,7 +64,7 @@ def post(url, payload):
 
 
 if __name__ == '__main__':
-    usage = "Usage: %prog [options] TO SUBJECT BODY"
+    usage = "Usage: %prog [options] URL SUBJECT BODY"
     parser = OptionParser(usage=usage)
     parser.add_option("-u", "--user", dest="user",
                       help="Username for the post", metavar="USERNAME")
