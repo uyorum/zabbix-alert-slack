@@ -17,15 +17,21 @@ import json
 # Parse body from Zabbix and return a dict
 # Body must be composed of lines formated as "KEY: VALUE"
 def parse_body(body):
-    params = OrderedDict([
-        # Their keys are used in other some places
-        ('DATETIME', ''),    # fallback
-        ('TRIGGER_STATUS', ''),    # color
-        ('TRIGGER_SEVERITY', '')    # color
-        ])
+    params = OrderedDict([])
+
     for str in body.split("\n"):
         key, value = str.split(':', 1)
         params[key.strip()] = value.strip()
+
+    # These keys are used in other some places
+    for key in [
+            'DATETIME',    # fallback
+            'TRIGGER_STATUS',    # color
+            'TRIGGER_SEVERITY',    # color
+            ]:
+        if key not in params:
+            params[key] = ''
+
     return params
 
 
